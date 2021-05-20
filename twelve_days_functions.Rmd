@@ -1,5 +1,6 @@
 ---
 title: "Lab: The 12 Days of Christmas"
+author: "Ben Cahill"
 output:
   prettydoc::html_pretty:
     theme: tactile
@@ -44,15 +45,17 @@ the function takes a gift and returns the appropriate plural.
 # Arguments -- gift -- A string or vector of strings
 # Return -- A string or vector of strings with the pluralized words
 
-pluralize_gift <- function(gift){
+pluralize_gift <- function(gift) {
+  
+  gift <- gift %>%
+    str_pad(width = str_length(gift)+1, side = "right", pad = "s") %>% 
+    str_replace_all(c("ooses" = "eese",
+                      "ys" = "ies"))
 
-gift <- gift %>%
-  str_replace()
-
-return(gift)
-
+  return(gift)
 }
 ```
+
 
 *Hint 1:* Note that the gifts on days six and nine have unusual pluralizations.
 You may assume that in other datasets, there will be no special cases besides
@@ -98,7 +101,7 @@ purrr::map_chr(xmas$Gift.Item, pluralize_gift)
 Write a function called `make_phrase` that takes as input the necessary information, 
 and returns a phrase.  For example, 
 
-```{r}
+```{r, eval=FALSE}
 make_phrase(num = 10, 
             num_word = "ten", 
             item = "lords", 
@@ -118,31 +121,33 @@ make_phrase <- function(num, num_word, item, verb, adjective, location) {
   
   ## Step 1: Replace NAs with blank strings
   verb <- str_replace_na(verb, "")
+  adjective <- str_replace_na(adjective, "")
+  location <- str_replace_na(location, "")
   
   ## Step 2: Pluralize the gift if needed
   ## Items with numbers larger than 1 should be pluralized
   ## Single items starting with a vowel should have "an" in front
   ## All other single items should have "a" in front
   
-  vowel_start <- str_sub(item, 1, 1) %>% str_detect(___)
+  vowel_start <- str_sub(item, 1, 1) %>% str_detect("[aeiou]")
   
-  if (___) {
+  if (num > 1) {
     
     item <- pluralize_gift(item)
     
-  } else if (vowel_start) {
+  } else if (vowel_start && num == 1) {
   
-      
+      item <- paste("an ", item)
     
   } else {
     
-    
+    item <- paste("a ", item)
+    num_word = "and"
     
   }
   
   glue::glue("{num_word} {adjective} {item} {verb} {location}") %>%
     str_squish()
-  
   
 }
 ```
@@ -158,9 +163,19 @@ to say `"twelve"` **not** `"twelfth"`. I suggest using the **english** package
 to create numbered days and then use those in your `pmap_chr()`!
 
 ```{r}
+
+library(english)
+
 xmas <- xmas %>%
   mutate(
-    Full.Phrase = pmap_chr(list(___), 
+    Day.in.Words.English = english::words(Day),
+    Full.Phrase = pmap_chr(list(Day, 
+                                Day.in.Words.English,
+                                Gift.Item,
+                                Verb,
+                                Adjective,
+                                Location
+                                ), 
                            make_phrase)
   )
 ```
@@ -186,25 +201,27 @@ Write a function called `sing_line` that takes as input:
 # Arguments -- phrase_col -- The variable name for the column in the dataset that contains the gift phrases
 # Return -- A string singing the line of the song with all gifts for the given day.
 
-sing_day <- function(dataset, line, phrase_col){
+sing_line <- function(dataset, line, phrase_col){
   
   # Step 1: Setup the intro line
   
-  num_word <- ____
+  num_word <- as.character(english::ordinal(line))
   
   intro <- glue::glue("On the {num_word} day of Christmas")
   
   # Step 2: Sing the gift phrases
 
     phrases <- dataset %>% 
-      pull({{phrase_col}})
+      filter(Day <= line) %>% 
+      pull({{phrase_col}}) 
 
-  ????
+    gifts <- paste(rev(phrases), collapse = '\n')
     
   ## put it together
+    full_intro <- paste(intro, ', my true love sent to me,\n', sep = '')
     
-  ????
 
+  return(paste(full_intro, gifts, '.\n', sep = ''))
 
 }
 
@@ -216,7 +233,7 @@ For example,
 
 ```{r}
 sing_line(xmas, 
-          num = 2, 
+          line = 3, 
           phrase_col = Full.Phrase)
 
 ```
